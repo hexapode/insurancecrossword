@@ -3,6 +3,7 @@
 <html>
 
 <head>
+<title>Insurance Crosswords</title>
 <style>
 
   body {
@@ -10,30 +11,69 @@
     margin : 32px;
   }
 
-  .counter {
-    user-select: none;
-    color : #ddd;
-    position : absolute;
-    left : 32px;
+  .letter {
+    width : 40px;
+    height: 30px;
+    display:block;
+    float : left;
+    font-size : 24px;
+    text-align: center;
+    padding-top : 10px;
+    user-select : none;
+    border : 1px solid #000;
   }
 
-  .definition {
-    padding-left : 64px;
-    padding-bottom : 16px;
+  #theater {
+    padding : 0px;
+    margin : 0px;
+    display : inline-block;
+    border : 1px solid #000;
   }
-  .definition-list {
-    padding-left : 64px;
-    padding-bottom : 4px;
-    cursor:pointer;
+
+  #definitionTheater {
+    position: absolute;
+    right : 0px;
+    top : 120px;
+    max-height : 100%;
+    width : 50%;
+    overflow-y : auto;
+    
+  }
+
+  .black {
+    background-color: black;
+  }
+
+  .line {
+    margin : 0px;
+    padding : 0px;
+    height :40px;
+    clear: both;
+  }
+  #header {
+    margin-bottom : 16px;
+  }
+  .inumb {
+    width : 30px;
+  }
+
+  .mistake {
+    color : #d88;
   }
 </style>
 </head>
 
 <body>
-  <i style="user-select: none"><b style="cursor:pointer" onclick="init()">back to list of words</b>, 
-    try a <b style="cursor:pointer" onclick="random()">random word</b> or type word under to search : </i>
-  <h1 id="wordSelected" onkeypress="if (event.keyCode == 13) {this.blur(); event.stopPropagation(); render(this.innerText.toLowerCase())}" contenteditable="true" onblur="render(this.innerText.toLowerCase())"></h1>
+  <div id='header'>
+    <h1>Insurance Cross words</h1>
+    <input type="number" class='inumb' id="x" value="12" /> X <input type="number" class='inumb' id="y" value="12" /> Add non continuous words<input type="checkbox" id="forcefill" /> <input type='button' value="Generate New grid" onclick="newGrid()"/> <input type='button' value="Dispaly Solution" onclick="displayGrid(true)"/>
+  </div>
   <div id='theater'>
+
+  </div>
+
+
+  <div id='definitionTheater'>
 
   </div>
   <script>
@@ -45,72 +85,398 @@
     }
 
     function init() {
-      wordSelected.innerHTML = "list of words:";
-      render("List of words:");
+      generateAGrid(12,12, false);
+    }
+    
+    
+    function newGrid() {
+      let xsize = parseInt(x.value);
+      let ysize = parseInt(y.value);
+      generateAGrid(xsize, ysize, forcefill.checked);
     }
 
-    function random() {
-      let k = Object.keys(WORDS);
-      let w = k[k.length * Math.random() | 0];
 
-      wordSelected.innerHTML = w;
-      render(w);
-    }
+    let grid = [];
+    let wordsList = [];
+    let X_SIZE = 0;
+    let Y_SIZE = 0;
+    function generateAGrid(xsize, ysize, forcefill=true) {
+      X_SIZE = xsize;
+      Y_SIZE = ysize;
+      grid = [];
+      wordsList = [];
+      let possibility = Object.keys(WORDS)
 
-    function render(word) {
-      if (!WORDS[word]) {
-        renderNoResult(word);
-        return;
-      }
-
-
-      let html = "";
-      // SORT DEFS PER LENGTH
-      WORDS[word].fullDefs.sort(
-        (a, b) => {
-          if ( a.def.length > b.def.length)
-          return 1; return -1
+      for (let  x = 0; x < xsize; ++x) {
+        grid[x] = [];
+        for (let y = 0; y < ysize; ++y) {
+          grid[x][y] = "";
         }
-      )
+      }
+
       
-      let tokenMap = {
+      let retry = 0;
+      while (retry < 10000) {
+//        addAWord();
+        // grid, wordsList, definition
+        
+        let word = possibility[Math.random() * possibility.length  | 0];
+        if (word.length > xsize && word.length > ysize) {
+          possibility.splice(possibility.indexOf(word), 1);
+          continue;
+        }
 
+        let orientation = ["vertical", "horizontal"][Math.random() * 2 | 0];
+        let x, y = 0;
+
+        if (orientation == "vertical") {
+           x = Math.random() * xsize | 0;
+           y = Math.random() * (ysize - word.length) | 0;
+        } 
+        else {
+           y = Math.random() * ysize | 0;
+           x = Math.random() * (xsize - word.length) | 0;
+        }
+
+       if (x >= 0 && y >= 0) {
+
+        // is grid empty or match
+        let emptySpace = true;
+        let ix = x;
+        let iy = y;
+        let newGrid = JSON.parse(JSON.stringify(grid));
+        for (let index = 0; index < word.length; ++index) {
+          if (grid[ix][iy] && grid[ix][iy] != word[index]) {
+            emptySpace = false;
+            break;
+          }
+          newGrid[ix][iy]= word[index];
+          if (orientation == "vertical") {
+            iy++;
+          }
+          else  {
+            ix++;
+          }
+        }
+
+        if (emptySpace) {
+    
+          if (isGridValid(newGrid, xsize, ysize)) {
+
+
+            grid = newGrid;
+
+            if (orientation == "vertical") {
+              if (y > 0  && ! grid[x][y - 1]) {
+                grid[x][y - 1] = "none"
+              }
+              if (y + word.length < ysize && !grid[x][y + word.length]) {
+                grid[x][y + word.length] = "none"
+              }
+            }
+            else {
+              if (x > 0 && !grid[x - 1][y]) {
+                grid[x - 1][y] = "none"
+              }
+              if (x + word.length < xsize && !grid[x + word.length][y]) {
+                grid[x + word.length][y] = "none"
+              }
+            }
+            
+            retry = 0;
+            console.log(grid);
+            wordsList.push({
+              w : word,
+              o : orientation,
+              x :x,
+              y :y 
+            });
+            possibility.splice(possibility.indexOf(word), 1);
+
+          }
+
+          }
+
+       }
+
+          retry++;
+        
       }
- 
 
-      // display
-      let count = 0;
-      for (let def of WORDS[word].fullDefs) {
 
-        html += `
-        <div class='word'>
-          <div class='counter'>#${++count}</div>
-          <div class='definition'>
-            ${def.def} <br/><i style="user-select : none; color : #bbb">(${def.lob}, ${def.country} )</i>  
-          </div>
-        </div>`
+      // round 2
+      retry = 0
+      while (forcefill && retry < 1000) {
+//        addAWord();
+        // grid, wordsList, definition
+        
+        let word = possibility[Math.random() * possibility.length  | 0];
+        if (word.length > xsize && word.length > ysize) {
+          possibility.splice(possibility.indexOf(word), 1);
+          continue;
+        }
+
+        let orientation = ["vertical", "horizontal"][Math.random() * 2 | 0];
+        let x, y = 0;
+
+        if (orientation == "vertical") {
+           x = Math.random() * xsize | 0;
+           y = Math.random() * (ysize - word.length) | 0;
+        } 
+        else {
+           y = Math.random() * ysize | 0;
+           x = Math.random() * (xsize - word.length) | 0;
+        }
+
+       if (x >= 0 && y >= 0) {
+
+        // is grid empty or match
+        let emptySpace = true;
+        let ix = x;
+        let iy = y;
+        let newGrid = JSON.parse(JSON.stringify(grid));
+        for (let index = 0; index < word.length; ++index) {
+          if (grid[ix][iy] && grid[ix][iy] != word[index]) {
+            emptySpace = false;
+            break;
+          }
+          newGrid[ix][iy]= word[index];
+          if (orientation == "vertical") {
+            iy++;
+          }
+          else  {
+            ix++;
+          }
+        }
+        if (orientation == "vertical") {
+          if (y > 0 && grid[x][y-1] && grid[x][y-1] !="none") {
+            emptySpace = false;
+          }
+          else if (y + word.length < ysize && grid[x][y+1] && grid[x][y+1]!="none") {
+            emptySpace = false;
+          }
+        }
+        else  {
+          if (x > 0 && grid[x -1][y] && grid[x -1][y] !="none") {
+            emptySpace = false;
+          }
+          else if (x + word.length < xsize && grid[x + 1][y] && grid[x+ 1][y] !="none") {
+            emptySpace = false;
+          }
+        }
+
+        if (emptySpace) {
+    
+            grid = newGrid;
+
+            if (orientation == "vertical") {
+              if (y > 0  && ! grid[x][y - 1]) {
+                grid[x][y - 1] = "none"
+              }
+              if (y + word.length < ysize && !grid[x][y + word.length]) {
+                grid[x][y + word.length] = "none"
+              }
+            }
+            else {
+              if (x > 0 && !grid[x - 1][y]) {
+                grid[x - 1][y] = "none"
+              }
+              if (x + word.length < xsize && !grid[x + word.length][y]) {
+                grid[x + word.length][y] = "none"
+              }
+            }
+            
+            retry = 0;
+            console.log(grid);
+            wordsList.push({
+              w : word,
+              o : orientation,
+              x :x,
+              y :y 
+            });
+            possibility.splice(possibility.indexOf(word), 1);
+
+          }
+
+       }
+
+          retry++;
+        
       }
 
-      theater.innerHTML = html;
+      console.log(wordsList);
+
+      displayGrid(false);
+      displayWordlist(wordsList);
+    }
+
+    function displayWordlist(wordList) {
+      let width = header.offsetWidth - theater.offsetWidth - 10;
+
+      if (width < 0) {
+        width = header.offsetWidth;
+      }
+
+
+      definitionTheater.style.width = `${width}px`
+      definitionTheater.style.top = `${theater.offsetTop}px`
+      definitionTheater.style.height = `${window.innerHeight - theater.offsetTop}px`
+      let html = {
+        vertical : "<b>Vertical :</b><br/>",
+        horizontal :"<b>Horizontal :</b><br/>"
+      } 
+
+      wordList.sort((a, b) => {
+        if (a.y > b.y) {
+          return 1;
+        }
+        if (a.y == b.y) {
+          if (a.x > b.x) {
+            return 1;
+          }
+        }
+        return -1;
+      })
+
+     
+
+      for (let word of wordList) {
+        if (word.o == "horizontal") {
+          html[word.o] += 
+          `
+            <div class='def'>
+              <div><b> Line ${word.y + 1}, Column ${word.x + 1}, ${word.w.length} letters</b></div>
+              <div>
+              ${WORDS[word.w].defs[WORDS[word.w].defs.length * Math.random | 0]}
+              </div>
+            </div>
+          `
+        }
+      
+      }
+
+      wordList.sort((a, b) => {
+        if (a.x > b.x) {
+          return 1;
+        }
+        if (a.x == b.x) {
+          if (a.y > b.y) {
+            return 1;
+          }
+        }
+        return -1;
+      })
+
+     
+
+      for (let word of wordList) {
+        if (word.o == "vertical") {
+          html[word.o] += 
+          `
+            <div class='def'>
+              <div> <b>Column ${word.x + 1}, Line ${word.y + 1},  ${word.w.length} letters</b></div>
+              <div>
+              ${WORDS[word.w].defs[WORDS[word.w].defs.length * Math.random | 0]}
+              </div>
+            </div>
+          `
+        }
+      
+      }
+
+      definitionTheater.innerHTML = 
+      `<div>${html.horizontal}</div><br/><br/><div>${html.vertical}</div>`
 
     }
-    function renderNoResult (word) {
-      let html = `<div>No results for word : ${word}</div>`
 
-      html += "<div><br/><br/>Here is the list of existing terms, click on one to dislay all its definitions: <br/><br/></div>";
-      let count = 0;
-
-      let keys = Object.keys(WORDS).sort();
-      for (let word of keys) {
-        html +=  `
-        <div class='word'>
-          <div class='counter'>#${++count}</div>
-          <div class='definition-list' onclick="wordSelected.innerHTML='${word}';render('${word}')"><b>${word}</b>,<i> with ${WORDS[word].count} definitions</i></div>
-        </div>`
-
+    function displayGrid(displaySolution = false) {
+      xsize = X_SIZE;
+      ysize = Y_SIZE;
+      let html = ``;
+      for (let y = 0; y < ysize; ++y) {
+        html += "<div class='line'>"
+        for (let x = 0; x < xsize; ++x) {
+          html += `<span id="g-${x}-${y}"
+           class="letter${(!grid[x][y] || grid[x][y] == "none" )? " black":""}" ${(!grid[x][y] || grid[x][y] == "none" )? "":
+          `contenteditable=true onKeyPress='update(event,this, ${x}, ${y})'`}
+           >${(!grid[x][y] || grid[x][y] == "none" )? "" : (!displaySolution) ? "&nbsp;" : grid[x][y] }</span>`
+        }
+        html += "</div>"
       }
 
       theater.innerHTML = html;
+    }
+
+    function update(event,el, x, y) {
+
+      event.stopPropagation();
+      event.preventDefault();
+      let v = String.fromCharCode(event.keyCode);
+      event.target.innerHTML = v;
+
+      if (grid[x][y] == v) {
+        el.className = "letter";
+      }
+      else{
+        el.className = "letter mistake";
+      }
+    }
+
+    function isGridValid(grid, xsize, ysize) {
+
+      let x = 0;
+      let y = 0;
+      let token = "";
+      // vertical
+
+      for (let x = 0; x < xsize; ++x) {
+        token = "";
+        for (let y = 0; y < ysize; ++y) {
+          if (!grid[x][y] || grid[x][y] == "none") {
+            if (token) {
+              if (!WORDS[token] && token.length > 1) {
+                return false;
+              }
+            }
+            token = "";
+          }
+          else {
+            token += grid[x][y];
+          }
+          
+        }
+        if (token) {
+          if (!WORDS[token]  && token.length > 1) {
+            return false;
+          }
+        }
+      }
+
+
+      for (let y = 0; y < ysize; ++y) {
+        token = "";
+          for (let x = 0; x < xsize; ++x) {
+          if (!grid[x][y] || grid[x][y] == "none") {
+            if (token) {
+              if (!WORDS[token]  && token.length > 1) {
+                return false;
+              }
+            }
+            token = "";
+          }
+          else {
+            token += grid[x][y];
+          }
+          
+        }
+        if (token) {
+          if (!WORDS[token]  && token.length > 1) {
+            return false;
+          }
+        }
+      }
+
+      return true;
     }
 
   </script>
